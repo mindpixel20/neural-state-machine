@@ -12,8 +12,8 @@ def gen_bin(amt):
             bits.append(0)
     return bits
 
-length_in = 256
-length_feedback = 256
+length_in = 250
+length_feedback = 250
 amt = 500
 training_data = []
 print(f"Generating training data with {amt} elements of {length_in} bits for input and {length_feedback} bits for feedback")

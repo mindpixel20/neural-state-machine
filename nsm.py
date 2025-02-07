@@ -251,7 +251,7 @@ class neural_state_machine:
         self.m = m # neuron feedback width
         self.n = k + m # total neurons
 
-        self.neurons = []
+        self.neurons = [] #
 
         for i in initial_training_data: # to pad and account for feedback if it isn't present
             if len(i[0]) < (k + m):
