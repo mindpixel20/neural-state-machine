@@ -194,14 +194,8 @@ class nsm_neuron:
                 i_min = tmp
                 bits.append(c.z)
             elif tmp == i_min:
-                bits.append(c.z) 
-        # then build a list of those that have dd = i_min
-        #bits = []
-        #for c in cells:
-            #tmp = self.disc_dist(c.i, input_vector)
-            #if tmp == i_min:
-                #bits.append(c.z)
-
+                bits.append(c.z)
+                
         return self.bits_equal(bits) 
 
     def cga2(self, input_vector, precomputed_hamming):
@@ -213,7 +207,6 @@ class nsm_neuron:
             return self.bits_equal(bits)
     
         else:
-            x = x / 0
             # first, find the lowest hamming distance
             cells = self.memory.values()
             for c in cells:
@@ -336,13 +329,7 @@ class neural_state_machine:
                     ham.append(mc) 
 
                 elif tmp == ham_dist:
-                    ham.append(mc)
-                    
-            #if ham_dist < len(bits):
-                #for mc in mem: # if found, find memory locations that're equal to or closer than the minimum distance
-                    #tmp = self.hamming(mem[mc].i, bits)
-                    #if tmp <= ham_dist:
-                        #ham.append(mc) 
+                    ham.append(mc) 
         
         outputs = []
         for i in range(0, self.l):
@@ -375,14 +362,3 @@ def load_nsm_model(filename):
     model = pickle.load(model_file)
     model_file.close()
     return model
-
-        
-        
-#training_set = []
-#training_set.append(([1,1,0,0],[1,1,1,1,0,0,0,0]))
-#training_set.append(([0,1,1,1],[1,1,1,1,0,0,0,0]))
-#training_set.append(([0,0,1,0],[0,0,0,0,0,0,0,0]))
-#training_set.append(([0,1,0,1],[1,1,0,0,0,0,0,0]))
-
-#nm = neural_state_machine(4,4,4, training_set)
-#outs = nm.get_z_str("0101")
