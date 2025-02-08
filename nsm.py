@@ -144,6 +144,8 @@ class nsm_neuron:
         else:
             self.memory[x_str].z = y
 
+        pi_update=False
+
         if pi_update and len(self.pi_cells) > 0:
             self.coeff_vector((x, y))
             return
@@ -164,6 +166,7 @@ class nsm_neuron:
     def cga(self, input_vector, pre_ham=[]):
         ivstr = self.u.bin2str(input_vector)
         if ivstr in self.memory:
+            self.last_output = self.memory[ivstr].z
             return self.memory[ivstr].z
         else:
             bit = self.cga1(input_vector)
@@ -173,6 +176,7 @@ class nsm_neuron:
             else:
                 if(pre_ham):
                     bit = self.cga2(input_vector, pre_ham)
+                    self.last_output = bit
                 if bit:
                     self.last_output = bit
                     return bit
@@ -195,12 +199,11 @@ class nsm_neuron:
                 bits.append(c.z)
             elif tmp == i_min:
                 bits.append(c.z)
-                
         return self.bits_equal(bits) 
 
     def cga2(self, input_vector, precomputed_hamming):
         bits = []
-        h_min = len(input_vector) # again, some gigantic starting number 
+        h_min = len(input_vector) # again, some gigantic starting number
         if precomputed_hamming:
             for p in precomputed_hamming:
                 bits.append(self.memory[p].z)
@@ -231,6 +234,7 @@ class nsm_neuron:
     def bits_equal(self, bits): # it'll return the bit if they're all the same!
         if len(bits) == 1: # needs to be two or more bits to check I think? 
             return None
+        print(bits)
         x = bits[0]
         for b in bits:
             if b != x:
@@ -265,16 +269,25 @@ class neural_state_machine:
             print("Neural state machine ready. Total neurons:",len(self.neurons))
 
     def fix_input(self, input_str): # wouldn't make sense to convert back if it'll need to be converted when processing
-        bits = self.u.str2bin(input_str)
-        if len(bits) > self.k:
-            bits = bits[0:self.k]
+        bits = self.u.str2bin(input_str, self.k)
+        return self.pad_input(bits)
+
+    def pad_input(self, bits, required):
+        if len(bits) > required:
+            bits = bits[0:required]
             return bits
-        elif len(bits) < self.k:
-            while len(bits) < self.k:
+        elif len(bits) < required:
+            while len(bits) < required:
                 bits.append(0)
             return bits
         else:
             return bits
+
+    def get_feedback(self):
+        feedback = [] 
+        for i in range(self.k, self.n):
+            feedback.append(self.neurons[i].last_output)
+        return feedback 
 
     def train_all(self, training_set):
         ctr = 1
@@ -286,7 +299,9 @@ class neural_state_machine:
         for t in training_set:
             start = time.time() 
             for i in range(0, self.n):
-                self.neurons[i].train(t[0], t[1][i], True)
+                padded_input = self.pad_input(t[0], self.n)
+                padded_output = self.pad_input(t[1], self.n)
+                self.neurons[i].train(padded_input, t[1][i], True)
             end = time.time()
             total = end - start
             total_time += total
@@ -298,22 +313,33 @@ class neural_state_machine:
     def train_io_only(self, training_set):
         for t in training_set:
             for i in range(0, self.k):
-                self.neurons[i].train(t[0], t[1][i], True)
+                padded_input = self.pad_input(t[0], self.n)
+                padded_output = self.pad_input(t[1], self.n)
+                self.neurons[i].train(padded_input, t[1][i], True)
 
     def train_feedback_only(self, training_set):
         for t in training_set:
             for i in range(self.k, self.n):
-                self.neurons[i].train(t[0], t[1][i], True)
+                padded_input = self.pad_input(t[0], self.n)
+                padded_output = self.pad_input(t[1], self.n)
+                self.neurons[i].train(padded_input, t[1][i], True)
 
     # assuming a fully connected network for simplicity
+
+    def prep_input(self, input_bits):
+        full_input = self.pad_input(input_bits, self.k)
+        output_of_feedback_neurons = self.get_feedback()
+        full_input = full_input + output_of_feedback_neurons
+        return full_input
+    
     def get_z(self, bits):
-        for i in range(self.l, (self.l + self.m)): # feedback
-            bits.append(self.neurons[i].last_output)
+        #for i in range(self.l, (self.l + self.m)): # feedback
+            #bits.append(self.neurons[i].last_output)
 
         # pre compute the hamming distances
         # first, get a neuron's memory to work with
 
-        
+        self.prep_input(bits)
         mem = self.neurons[0].memory
         bitstr = self.u.bin2str(bits)
         ham = [] # this will end up being a list of memory locations that're close enough to the input vector
@@ -332,11 +358,14 @@ class neural_state_machine:
                     ham.append(mc) 
         
         outputs = []
-        for i in range(0, self.l):
+        for i in range(0, self.n):
             bit = self.neurons[i].cga(bits, ham)
             outputs.append(bit)
 
-        return outputs
+        print("FULL INPUT:", bits)
+        print("FULL OUTPUT:", outputs)
+
+        return outputs[0:self.l] 
 
     def get_z_str(self, input_vector):
         bits = self.fix_input(input_vector)
